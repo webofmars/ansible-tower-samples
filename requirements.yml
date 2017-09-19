@@ -1,0 +1,5 @@
+- src: webofmars.dummy
+  version: develop
+
+- src: geerlingguy.nginx
+  version: 2.3.1
