@@ -1,0 +1,12 @@
+---
+###############################################################################
+# Ansible prerequisites for Debian/Ubuntu
+
+- name: Ansible prerequisites | Raw apt update
+  raw: apt -y update
+
+- name: Ansible prerequisites | Install python 2 minimal
+  raw: test -e /usr/bin/python || apt install -y python-minimal python-apt python-psycopg2  
+
+- name: Ansible prerequisites | Install aptitude
+  raw: test -e /usr/bin/aptitude || apt install -y aptitude
