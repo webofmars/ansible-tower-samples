@@ -1,7 +1,81 @@
+- name: provisionning the hosts
+  hosts: localhost
+  tasks:
+    - debug:
+        var: "{{ item }}"
+      with_items:
+        - cloud_provider_auth_url
+        - cloud_provider_auth_user
+        - cloud_provider_auth_password
+        - cloud_provider_auth_project
+        - cloud_provider_flavor
+        - cloud_provider_image
+        - cloud_provider_regionname
+        - cloud_provider_keyname
+
+    - name: openstack | provisionning
+      os_server:
+        auth:
+          auth_url: "{{ cloud_provider_auth_url  }}"
+          username: "{{ cloud_provider_auth_user }}"
+          password: "{{ cloud_provider_auth_password }}"
+          project_name: "{{ cloud_provider_auth_project }}"
+        flavor: "{{ cloud_provider_flavor }}"
+        image: "{{ cloud_provider_image }}"
+        key_name: "{{ cloud_provider_keyname }}"
+        region_name: "{{ cloud_provider_regionname }}"
+        name: "{{ item }}"
+        state: "present"
+        userdata: |
+          #!/bin/bash
+          apt -y update && apt install -y aptitude python-minimal
+        wait: True
+      with_items:
+        - awx-test-1
+        - awx-test-2
+
+    - name: openstack | inventory refresh
+      os_server_facts:
+        auth:
+          auth_url: "{{ cloud_provider_auth_url  }}"
+          username: "{{ cloud_provider_auth_user }}"
+          password: "{{ cloud_provider_auth_password }}"
+          project_name: "{{ cloud_provider_auth_project }}"
+        server: "awx-test-*"
+      register: awx_test_servers
+
+    - debug:
+        var: awx_test_servers
+
+    - name: ansible inventory | compute
+      add_host:
+        hostname: "{{ item.accessIPv4 }}"
+        groups: awx-test
+      when: item.name | search("awx-test")
+      with_items: "{{ awx_test_servers.ansible_facts.openstack_servers }}"
+      changed_when: false
+
 - name: Hello World Sample
-  hosts: all
+  hosts: awx-test
   tasks:
     - name: Hello Message
       debug:
         msg: "Hello World!"
 
+- name: clean
+  hosts: localhost
+  tasks:
+    - name: openstack | destroy
+      os_server:
+        auth:
+          auth_url: "{{ cloud_provider_auth_url  }}"
+          username: "{{ cloud_provider_auth_user }}"
+          password: "{{ cloud_provider_auth_password }}"
+          project_name: "{{ cloud_provider_auth_project }}"
+        region_name: "{{ cloud_provider_regionname }}"
+        name: "{{ item }}"
+        state: "absent"
+        wait: True
+      with_items:
+        - awx-test-1
+        - awx-test-2
